@@ -1,0 +1,16 @@
+# Ignore all build directories anywhere in the repo
+build/
+
+# Object files
+*.o
+*.obj
+
+# Compiled binaries / executables (no extension on Linux/macOS)
+*.out
+*.exe
+*.a
+*.so
+
+# Editor/OS cruft (optional but handy)
+*~
+.DS_Store
