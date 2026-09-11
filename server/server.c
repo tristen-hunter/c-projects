@@ -1,13 +1,4 @@
-// Setup phase (once):
-  // 1.1 Create a socket → get a file descriptor for it
-  // 1.2 Set an option so you can restart the server quickly without "address already in use" errors
-  // 1.3 Bind that socket to an address + port — this is you claiming "I own port 8080 on this machine"
-  // 1.4 Listen on it — this turns the socket into one that can accept incoming connections, and sets a backlog queue size
-
 // Loop phase (repeats):
-  // 5. Accept — this blocks until a client connects, 
-     // then hands you a new, separate socket just for talking to 
-     // that one client (your original listening socket stays free to accept more later)
   // 6. Read the request off the new connection socket
   // 7. Write your HTTP response back
   // 8. Close the connection socket
@@ -35,6 +26,16 @@ int main(void)
     return 1;
   }
 
+  // 1.1 open port 8080 after ending program
+  int opt = 1;
+
+  if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+  {
+    perror("setsockopt");
+    close(server_fd);
+    return 1;
+  }
+
   // 2. bind to port 8080
   struct sockaddr_in address;
 
@@ -56,6 +57,41 @@ int main(void)
     close(server_fd);
     return 1;
   }
+
+  printf("Listening on port 8080...\n");
+
+  // 4. accept the connection (just 1) 
+  int client_fd = accept(server_fd, NULL, NULL);
+
+  if (client_fd == -1){
+    perror("socket");
+    close(server_fd);
+    return 1;
+  }
+
+  printf("Client connected!\n");
+
+
+  // 5. read the client request
+  char buffer [4096];
+
+  ssize_t bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
+
+  if (bytes_read == -1)
+  {
+    perror("read");
+    close(client_fd);
+    close(server_fd);
+    return 1;
+  }
+
+  buffer[bytes_read] = '\0';
+
+  printf("\nRequest recieved:\n\n %s", buffer);
+
+
+  close(client_fd);
+  close(server_fd);
 
   return 0;
 }
