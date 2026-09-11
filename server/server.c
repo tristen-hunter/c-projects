@@ -1,9 +1,3 @@
-// Loop phase (repeats):
-  // 6. Read the request off the new connection socket
-  // 7. Write your HTTP response back
-  // 8. Close the connection socket
-  // 9. (loop back to accept — but for now, just exit)
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
