@@ -14,7 +14,10 @@
   // 9. (loop back to accept — but for now, just exit)
 
 #include <stdio.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 #define PORT 8080
 #define BACKLOG 1
@@ -23,6 +26,7 @@
 
 int main(void)
 {
+  // 1. create the listening socket (internet socket)
   int server_fd = socket(AF_INET, SOCK_STREAM, 0);
 
   if (server_fd == -1) 
@@ -31,7 +35,27 @@ int main(void)
     return 1;
   }
 
-  printf("Socket created: %d\n", server_fd);
+  // 2. bind to port 8080
+  struct sockaddr_in address;
+
+  address.sin_family = AF_INET; // IPv4
+  address.sin_addr.s_addr = INADDR_ANY; // 4 byte internet address
+  address.sin_port = htons(8080); // port number
+  
+  if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) == -1)
+  {
+    perror("bind");
+    close(server_fd);
+    return 1;
+  }
+
+  // 3. listen on port 8080 for a connection request
+  if (listen(server_fd, BACKLOG) == -1) 
+  {
+    perror("listen");
+    close(server_fd);
+    return 1;
+  }
 
   return 0;
 }
