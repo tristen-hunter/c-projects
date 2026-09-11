@@ -5,11 +5,12 @@
   // 9. (loop back to accept — but for now, just exit)
 
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <unistd.h>
-#include <string.h>
 
 #define PORT 8080
 #define BACKLOG 1
@@ -74,7 +75,7 @@ int main(void)
 
 
   // 5. read the client request
-  char buffer [4096];
+  char buffer[4096];
 
   ssize_t bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
 
@@ -103,37 +104,65 @@ int main(void)
   printf("Version: %s\n", version);
 
 
-  // 7. hardcoded response
-  const char *body = "<h1>Hello World</h1>";
+  // 7. bring file into memory
+  FILE *index_p = fopen("index.html", "r");
 
+  if (index_p == NULL)
+  {
+    perror("fopen");
+    close(server_fd);
+    close(client_fd);
+    return 1;
+  }
+
+  fseek(index_p, 0, SEEK_END);
+  long file_size = ftell(index_p);
+  fseek(index_p, 0, SEEK_SET);
+
+  char *body = malloc(file_size + 1);
+
+  fread(body, 1, file_size, index_p);
+  body[file_size] = '\0';
+
+  fclose(index_p);
+
+  // 8. Two part response (header & body)
   char response[1024];
 
-  int response_length = snprintf(
+  int response_size = snprintf(
     response, 
     sizeof(response), 
     "HTTP/1.1 200 OK\r\n"
     "Content-Type: text/html\r\n"
-    "Content-Length: %zu\r\n"
-    "\r\n"
-    "%s",
-    strlen(body),
-    body
+    "Content-Length: %ld\r\n"
+    "\r\n",    
+    file_size
   );
 
-
-  // 8. sending
-  ssize_t bytes_sent = write(client_fd, response, response_length);
+  //9. Send response
+  ssize_t bytes_sent = write(client_fd, response, response_size);
 
   if (bytes_sent == -1)
   {
-    perror("write");
-    close(client_fd);
-    close(server_fd);
-    return 1;
+      perror("write");
+      free(body);
+      close(client_fd);
+      close(server_fd);
+      return 1;
   }
 
+  bytes_sent = write(client_fd, body, file_size);
 
+  if (bytes_sent == -1)
+  {
+      perror("write");
+      free(body);
+      close(client_fd);
+      close(server_fd);
+      return 1;
+  }
 
+  free(body);
   close(client_fd);
   close(server_fd);
 
