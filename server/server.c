@@ -121,6 +121,19 @@ int main(void)
   );
 
 
+  // 8. sending
+  ssize_t bytes_sent = write(client_fd, response, response_length);
+
+  if (bytes_sent == -1)
+  {
+    perror("write");
+    close(client_fd);
+    close(server_fd);
+    return 1;
+  }
+
+
+
   close(client_fd);
   close(server_fd);
 

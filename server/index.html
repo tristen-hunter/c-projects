@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Tristen Strydom">
+    <meta name="description" content="A simple introduction to building an HTTP server in C">
+    <title>Building a Simple HTTP Server in C</title>
+    <style>
+        :root {
+            --bg: #0f1419;
+            --surface: #1a2332;
+            --text: #e7ecf3;
+            --muted: #8b9bb4;
+            --accent: #3b82f6;
+            --accent-hover: #60a5fa;
+            --border: #2a3548;
+            --code-bg: #0d1117;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        /* Header */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        nav a {
+            color: var(--muted);
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        nav a:hover {
+            color: var(--text);
+        }
+
+        /* Hero */
+        .hero {
+            padding: 4rem 0 3rem;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: clamp(2rem, 5vw, 2.75rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.15rem;
+            color: var(--muted);
+            max-width: 600px;
+            margin: 0 auto 1.5rem;
+        }
+
+        .meta {
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        .meta strong {
+            color: var(--text);
+        }
+
+        /* Layout */
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            gap: 2.5rem;
+            padding-bottom: 4rem;
+        }
+
+        @media (max-width: 800px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Main article */
+        article section {
+            margin-bottom: 2.75rem;
+        }
+
+        article h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.85rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        article h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin: 1.5rem 0 0.6rem;
+            color: var(--accent-hover);
+        }
+
+        article p {
+            margin-bottom: 1rem;
+            color: #c9d4e3;
+        }
+
+        article ul, article ol {
+            margin: 0.75rem 0 1.25rem 1.5rem;
+            color: #c9d4e3;
+        }
+
+        article li {
+            margin-bottom: 0.4rem;
+        }
+
+        /* Code blocks */
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            overflow-x: auto;
+            margin: 1.25rem 0;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        code {
+            font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+            font-size: 0.875em;
+        }
+
+        p code, li code {
+            background: var(--surface);
+            padding: 0.15em 0.4em;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        /* Sidebar */
+        aside {
+            position: sticky;
+            top: 6rem;
+            align-self: start;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .card h3 {
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .card ul {
+            list-style: none;
+        }
+
+        .card li {
+            margin-bottom: 0.5rem;
+        }
+
+        .card a {
+            font-size: 0.95rem;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 2rem 0;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        footer p {
+            margin-bottom: 0.35rem;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="container">
+        <div class="logo">C<span>HTTP</span> Server</div>
+        <nav>
+            <ul>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#how-it-works">How it Works</a></li>
+                <li><a href="#parsing">Parsing</a></li>
+                <li><a href="#response">Response</a></li>
+                <li><a href="#next">Next Steps</a></li>
+            </ul>
+        </nav>
+    </div>
+</header>
+
+<section class="hero">
+    <div class="container">
+        <h1>Building a Simple HTTP Server in C</h1>
+        <p>
+            A practical introduction to the core concepts behind writing
+            a minimal HTTP/1.1 server from scratch using plain C and sockets.
+        </p>
+        <p class="meta">
+            Written by <strong>Tristen Strydom</strong> · 11 September 2026
+        </p>
+    </div>
+</section>
+
+<div class="container content">
+    <main>
+        <article>
+            <section id="overview">
+                <h2>1. Overview</h2>
+                <p>
+                    An HTTP server is a program that listens for incoming
+                    network connections, reads HTTP requests, and sends back
+                    HTTP responses. At its core it is just a TCP server that
+                    speaks the HTTP protocol.
+                </p>
+                <p>
+                    Writing one in C forces you to understand the fundamentals:
+                    sockets, the request/response model, headers, status codes,
+                    and how browsers actually talk to servers.
+                </p>
+                <p>
+                    A minimal C HTTP server typically does the following:
+                </p>
+                <ul>
+                    <li>Create a TCP socket and bind it to a port (e.g. 8080)</li>
+                    <li>Listen for incoming connections</li>
+                    <li>Accept a client connection</li>
+                    <li>Read the raw HTTP request from the socket</li>
+                    <li>Parse the request line and headers</li>
+                    <li>Generate and write an HTTP response</li>
+                    <li>Close the connection (or keep it alive)</li>
+                </ul>
+            </section>
+
+            <section id="how-it-works">
+                <h2>2. How a Request Arrives</h2>
+                <p>
+                    When a browser visits <code>http://localhost:8080/</code>
+                    it opens a TCP connection and sends something like this:
+                </p>
+                <pre><code>GET / HTTP/1.1
+Host: localhost:8080
+Connection: keep-alive
+User-Agent: Mozilla/5.0 ...
+Accept: text/html,application/xhtml+xml,...
+Accept-Language: en-US,en;q=0.9
+
+</code></pre>
+                <p>
+                    The request ends with a blank line (<code>\r\n\r\n</code>).
+                    Everything before that blank line is headers; after it
+                    would be the body (rare for GET requests).
+                </p>
+                <h3>Key parts of the request line</h3>
+                <ul>
+                    <li><strong>Method</strong> – GET, POST, HEAD, etc.</li>
+                    <li><strong>Path</strong> – the resource being requested (<code>/</code>, <code>/index.html</code>, …)</li>
+                    <li><strong>Version</strong> – almost always <code>HTTP/1.1</code></li>
+                </ul>
+            </section>
+
+            <section id="parsing">
+                <h2>3. Parsing the Request in C</h2>
+                <p>
+                    In a small server you usually read the entire request into
+                    a buffer (a few kilobytes is enough for most simple cases)
+                    and then parse it.
+                </p>
+                <p>
+                    A common approach:
+                </p>
+                <ol>
+                    <li>Read bytes until you find the double CRLF that marks
+                        the end of the headers.</li>
+                    <li>Split the first line on spaces to extract method,
+                        path and version.</li>
+                    <li>Loop through the remaining lines and split each on
+                        the first colon to obtain header name and value.</li>
+                </ol>
+                <p>
+                    Remember that header names are case-insensitive and that
+                    values may contain leading spaces after the colon.
+                </p>
+                <pre><code>/* Simplified sketch */
+char buffer[8192];
+ssize_t n = read(client_fd, buffer, sizeof(buffer) - 1);
+buffer[n] = '\0';
+
+char *method = strtok(buffer, " ");
+char *path   = strtok(NULL, " ");
+char *version = strtok(NULL, "\r\n");
+</code></pre>
+                <p>
+                    Real production servers use more robust parsers, but the
+                    idea above is enough to get a working educational server.
+                </p>
+            </section>
+
+            <section id="response">
+                <h2>4. Sending a Response</h2>
+                <p>
+                    An HTTP response has the same overall shape as a request:
+                    a status line, headers, a blank line, then the body.
+                </p>
+                <pre><code>HTTP/1.1 200 OK
+Content-Type: text/html; charset=utf-8
+Content-Length: 1234
+Connection: close
+
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;...&lt;/html&gt;
+</code></pre>
+                <p>
+                    Important headers for a basic server:
+                </p>
+                <ul>
+                    <li><code>Content-Type</code> – tells the browser what kind of data it is receiving</li>
+                    <li><code>Content-Length</code> – size of the body in bytes</li>
+                    <li><code>Connection</code> – <code>close</code> or <code>keep-alive</code></li>
+                </ul>
+                <p>
+                    After writing the response you can either close the socket
+                    or keep it open if you support persistent connections.
+                </p>
+            </section>
+
+            <section id="next">
+                <h2>5. Next Steps</h2>
+                <p>
+                    Once the basic request/response loop works you can start
+                    adding features:
+                </p>
+                <ul>
+                    <li>Serve static files from a directory</li>
+                    <li>Handle different routes / paths</li>
+                    <li>Support POST requests and form data</li>
+                    <li>Add simple logging</li>
+                    <li>Implement basic keep-alive support</li>
+                    <li>Handle more status codes (404, 405, 500, …)</li>
+                </ul>
+                <p>
+                    Keep the code small and readable. Understanding every
+                    line is more valuable than having a feature-complete
+                    server at this stage.
+                </p>
+            </section>
+        </article>
+    </main>
+
+    <aside>
+        <div class="card">
+            <h3>On this page</h3>
+            <ul>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#how-it-works">How it Works</a></li>
+                <li><a href="#parsing">Parsing Requests</a></li>
+                <li><a href="#response">Sending Responses</a></li>
+                <li><a href="#next">Next Steps</a></li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>Key concepts</h3>
+            <ul>
+                <li>TCP sockets</li>
+                <li>HTTP/1.1 request line</li>
+                <li>Headers &amp; blank line</li>
+                <li>Status codes</li>
+                <li>Content-Type / Length</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>About</h3>
+            <p style="font-size: 0.9rem; color: var(--muted);">
+                This page is intentionally self-contained so it can be served
+                directly by a minimal C HTTP server with no external assets.
+            </p>
+        </div>
+    </aside>
+</div>
+
+<footer>
+    <div class="container">
+        <p>Written by <strong>Tristen Strydom</strong></p>
+        <p>11 September 2026</p>
+        <p style="margin-top: 0.75rem; font-size: 0.8rem;">
+            Built for learning how HTTP works at the socket level.
+        </p>
+    </div>
+</footer>
+
+</body>
+</html>
