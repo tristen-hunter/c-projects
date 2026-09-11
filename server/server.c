@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <string.h>
 
 #define PORT 8080
 #define BACKLOG 1
@@ -87,7 +88,37 @@ int main(void)
 
   buffer[bytes_read] = '\0';
 
-  printf("\nRequest recieved:\n\n %s", buffer);
+  // printf("\nRequest recieved:\n\n %s", buffer);
+
+
+  // 6. parsing
+  char method[16];
+  char path[256];
+  char version[16];
+
+  sscanf(buffer, "%15s %255s %15s", method, path, version);
+
+  printf("Method: %s\n", method);
+  printf("Path: %s\n", path);
+  printf("Version: %s\n", version);
+
+
+  // 7. hardcoded response
+  const char *body = "<h1>Hello World</h1>";
+
+  char response[1024];
+
+  int response_length = snprintf(
+    response, 
+    sizeof(response), 
+    "HTTP/1.1 200 OK\r\n"
+    "Content-Type: text/html\r\n"
+    "Content-Length: %zu\r\n"
+    "\r\n"
+    "%s",
+    strlen(body),
+    body
+  );
 
 
   close(client_fd);
